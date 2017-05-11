@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<meta charset="utf-8">
+<style>
+
+.enter {
+  fill: green;
+}
+
+.update {
+  fill: #333;
+}
+
+.xaxis{
+  font-size: 8px;
+}
+
+.line {
+  fill: none;
+  stroke: steelblue;
+  stroke-width: 2px;
+}
+
+.grid line {
+  stroke: lightgrey;
+  stroke-opacity: 0.7;
+  shape-rendering: crispEdges;
+}
+
+.grid path {
+  stroke-width: 0;
+}
+
+</style>
+<svg width="960" height="500"></svg>
+<script src="https://d3js.org/d3.v4.min.js"></script>
+<script>
+
+var svg = d3.select("svg"),
+    width = +svg.attr("width"),
+    height = +svg.attr("height")
+
+//Just add the required axis and call it in the update funcion
+  // add the X Axis
+   svg.append("g")
+      .attr("transform", "translate(0," + (height-20) + ")")
+      .classed('x axis', true)
+
+  // add the Y Axis
+  svg.append("g")
+  .classed('y axis', true)
+  .attr("transform", "translate(30," + 20 + ")")
+
+
+function update(data) {
+
+var parseTime = d3.timeParse("%d-%b-%y");
+
+// set the ranges
+var x = d3.scaleTime().range([30, width]);
+var y = d3.scaleLinear().range([height-40, 0]);
+
+// define the line
+var valueline = d3.line()
+    .x(function(d) { return x(d.date); })
+    .y(function(d) { return y(d.close); });
+
+
+  // format the data
+  data.forEach(function(d) {
+      d.date = parseTime(d.date);
+      d.close = +d.close;
+  });
+
+  // Scale the range of the data
+  x.domain(d3.extent(data, function(d) { return d.date; }));
+  y.domain([0, d3.max(data, function(d) { return d.close; })]);
+
+// add the valueline path.
+
+//First create a join, an empty selection involving the data.
+  var join = svg.selectAll(".line").data([data])
+
+// write the enter function, this gets executed when the number of dom elements is less than number of data elements. Initially there is no dom element hence this gets executed on first time call of the update function.
+  var enter = join.enter().append('path').attr("class", "line")
+
+//update pattern has change in d3 v4. Create an update pattern by combining join and merge. 
+  var _update = enter.merge(join)
+  
+//this is to remove any extra doms that are available.
+  _update.exit().remove()
+
+//actual updation of the path happens here. 
+  _update.attr("d", valueline);
+
+  // Modyfying the X and Y axis
+
+  svg.selectAll("g.y.axis")
+        .call(d3.axisLeft(y));
+
+   svg.selectAll("g.x.axis")
+        .call(d3.axisBottom(x));;
+  
+}
+
+
+//calling the update function with random data in loop to see how the enter update exit pattern works.
+
+var j = 0
+d3.interval(function() {
+  d3.csv('data.csv', function(data){
+    j += 1
+    if (j == data.length)
+    j = 1
+    data = data.slice(0, data.length-j)
+     console.log(data.length)
+    for(var i=0; i<data.length; i++)
+    {
+      data[i].close = data[i].close*Math.random()
+    }
+  update(data);
+    })
+}, 1500);
+
+</script>
